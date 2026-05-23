@@ -375,10 +375,6 @@ def main():
         print("✅ Todos os prompts atingiram todas as métricas >= 0.9!")
         print(f"\n✓ Confira os resultados em:")
         print(f"  https://smith.langchain.com/projects/{project_name}")
-        print("\nPróximos passos:")
-        print("1. Documente o processo no README.md")
-        print("2. Capture screenshots das avaliações")
-        print("3. Faça commit e push para o GitHub")
         return 0
     else:
         print("⚠️  Alguns prompts não atingiram todas as métricas >= 0.9")
