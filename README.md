@@ -287,6 +287,98 @@ python src/evaluate.py
 
 ---
 
+## Processo Implementado
+
+Esta implementação conclui o MVP local-first do desafio. O prompt otimizado fica em `prompts/bug_to_user_story_v2.yml`, usa o campo de entrada `{bug_report}` e é validado localmente antes das etapas externas no LangSmith.
+
+### Tecnicas Aplicadas (Fase 2)
+
+O arquivo `prompts/bug_to_user_story_v2.yml` lista as seguintes tecnicas em `techniques_applied`:
+
+| Tecnica | Por que foi usada | Como aparece no prompt |
+|---------|-------------------|------------------------|
+| Few-shot Learning | Reduz ambiguidade mostrando o padrao esperado de transformacao de bug report para user story. | O `system_prompt` contem exemplos `Example Input` e `Example Output` para bug simples, falha de seguranca e problema de performance. |
+| Role Prompting | Mantem a resposta alinhada a uma perspectiva de produto, nao apenas a uma descricao tecnica do bug. | O prompt define a persona de Product Manager senior atuando como Product Owner de produto digital. |
+| Structured Output | Facilita revisao, comparacao e avaliacao das respostas geradas. | O prompt exige Markdown com secoes de User Story, Criterios de Aceitacao, Contexto Tecnico e Observacoes quando aplicavel. |
+| Edge-case Handling | Aumenta robustez para os casos variados do dataset, incluindo relatos escassos, tecnicos, seguranca, performance e multiplos problemas. | As regras orientam como preservar evidencias tecnicas, registrar premissas e separar historias independentes. |
+
+### Como Executar o Fluxo Local e Remoto
+
+1. Configure o ambiente:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+2. Preencha as variaveis no `.env`:
+
+- `LANGSMITH_API_KEY`: obrigatoria para pull, push e avaliacao no LangSmith.
+- `LANGSMITH_PROJECT`: nome do projeto usado no dashboard e nos datasets de avaliacao.
+- `USERNAME_LANGSMITH_HUB`: namespace usado para publicar `{USERNAME_LANGSMITH_HUB}/bug_to_user_story_v2`.
+- `LLM_PROVIDER`: `openai` ou `google`.
+- `OPENAI_API_KEY`: obrigatoria quando `LLM_PROVIDER=openai`.
+- `GOOGLE_API_KEY`: obrigatoria quando `LLM_PROVIDER=google`.
+- `LLM_MODEL` e `EVAL_MODEL`: modelos usados na geracao e avaliacao remota.
+
+3. Puxe o prompt inicial de baixa qualidade para referencia local:
+
+```bash
+python src/pull_prompts.py
+```
+
+4. Valide o prompt otimizado localmente:
+
+```bash
+pytest tests/test_prompts.py
+```
+
+5. Publique o prompt otimizado no LangSmith Prompt Hub:
+
+```bash
+python src/push_prompts.py
+```
+
+6. Execute a avaliacao remota apos o push:
+
+```bash
+python src/evaluate.py
+```
+
+### Validacao Local
+
+O gate local deste MVP e o pytest estatico do prompt otimizado:
+
+```bash
+pytest tests/test_prompts.py
+```
+
+Esse teste verifica que `prompts/bug_to_user_story_v2.yml` tem `system_prompt`, persona de Product Manager/Product Owner, formato de user story ou Markdown, exemplos Few-shot, ausencia de marcadores TODO e pelo menos duas tecnicas declaradas.
+
+Evidencia local mais recente:
+
+```text
+$ venv/bin/python -m coverage run -m pytest tests/test_prompts.py
+collected 6 items
+tests/test_prompts.py ......                                             [100%]
+6 passed in 0.05s
+
+$ venv/bin/python -m coverage report --include=tests/test_prompts.py
+Name                    Stmts   Miss  Cover
+-------------------------------------------
+tests/test_prompts.py      58      1    98%
+-------------------------------------------
+TOTAL                      58      1    98%
+```
+
+### Verificacao Externa Restante
+
+A prontidao local nao substitui a fase de LangSmith. Depois que `pytest tests/test_prompts.py` passar, ainda e necessario publicar com `python src/push_prompts.py`, rodar `python src/evaluate.py`, analisar as metricas Helpfulness, Correctness, F1-Score, Clarity e Precision, e iterar o prompt ate todas ficarem >= 0.9. Essa iteracao de score no LangSmith e a proxima fase apos a base local estar pronta.
+
+---
+
 ## Entregável
 
 1. **Repositório público no GitHub** (fork do repositório base) contendo:
